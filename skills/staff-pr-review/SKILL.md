@@ -24,6 +24,9 @@ gh pr view {PR_NUMBER} --json title,body,additions,deletions,files,commits,autho
 
 # Get the diff
 gh pr diff {PR_NUMBER}
+
+# Get HEAD SHA for inline comments
+gh pr view {PR_NUMBER} --json headRefOid --jq '.headRefOid'
 ```
 
 For GitHub Enterprise, prefix with `GH_HOST`:
@@ -31,34 +34,59 @@ For GitHub Enterprise, prefix with `GH_HOST`:
 GH_HOST=git.example.com gh pr view {PR_NUMBER} ...
 ```
 
-### 2. Analyze Systematically
+### 2. Review Checklist
 
-#### Critical Issues (Block Merge)
+#### Code Quality
+- Clean separation of concerns?
+- Proper error handling?
+- Type safety (if applicable)?
+- DRY principle followed?
+- Edge cases handled?
+
+#### Architecture
+- Sound design decisions?
+- Scalability considerations?
+- Performance implications?
+- Security concerns?
+
+#### Testing
+- Tests actually test logic (not just mocks)?
+- Edge cases covered?
+- Integration tests where needed?
+- All tests passing?
+
+#### Production Readiness
+- Migration strategy (if schema changes)?
+- Backward compatibility considered?
+- Documentation complete?
+- No obvious bugs?
+
+### 3. Categorize Issues by Severity
+
+#### Critical (Must Fix - Block Merge)
 - Race conditions, deadlocks, resource leaks
 - Security vulnerabilities (credential exposure, injection, auth bypass)
 - Data corruption or loss scenarios
 - Breaking API contract changes without documentation
 - Silent behavior changes affecting downstream consumers
+- Bugs, broken functionality
 
-#### Medium Issues (Should Fix)
+#### Important (Should Fix)
 - Exception handling too broad (`except Exception`) or too narrow
 - Missing error logging that hurts debugging
 - Performance concerns under load
 - Thread safety issues in concurrent code
 - Fragile patterns (monkey-patching, global mutable state)
 - Incorrect HTTP status codes or error semantics
+- Architecture problems, missing features, test gaps
 
-#### Minor Issues (Nice to Fix)
+#### Minor (Nice to Have)
 - Inefficient but functional code
 - Missing type hints or documentation
 - Code style inconsistencies
+- Optimization opportunities
 
-#### Positive Callouts
-- Good refactors, DRY improvements
-- Proper async patterns
-- Security hardening
-
-### 3. Post Inline Comments
+### 4. Post Inline Comments
 
 Use the GitHub API to post comments on specific lines:
 
@@ -73,50 +101,46 @@ Suggested fix or alternative." \
   -f side="RIGHT"
 ```
 
-Get the HEAD SHA first:
-```bash
-gh pr view {PR_NUMBER} --json headRefOid --jq '.headRefOid'
-```
-
-### 4. Submit Overall Review
+### 5. Submit Overall Review
 
 ```bash
 gh pr review {PR_NUMBER} --request-changes --body "## Staff Engineer Review
 
 **Verdict: Request Changes**
 
-Overall direction is good—[brief positive]. But there are issues to address.
+---
+
+### Strengths
+[What's well done? Be specific with file:line references]
 
 ---
 
-### Critical Issues
+### Issues
 
-#### 1. [Title] (\`path/to/file.py:123\`)
-[Explanation of problem and suggested fix]
+#### Critical
+1. **[Title]** (\`path/file.py:123\`)
+   - Issue: [What's wrong]
+   - Why: [Why it matters]
+   - Fix: [How to fix]
 
----
+#### Important
+...
 
-### Medium Issues
-
-#### 2. [Title] (\`path/to/file.py:456\`)
-[Explanation]
-
----
-
-### Minor Issues
-
-#### 3. [Title]
-[Brief note]
+#### Minor
+...
 
 ---
 
-### Good Stuff
-
-- **[Feature]** (\`file.py\`) — [Why it's good]
+### Recommendations
+[Improvements for code quality, architecture, or process beyond just fixing issues]
 
 ---
 
-Fix critical issues, address mediums, and this is good to go."
+### Assessment
+
+**Ready to merge?** [Yes / No / With fixes]
+
+**Reasoning:** [Technical assessment in 1-2 sentences]"
 ```
 
 ## Comment Style Guide
@@ -125,10 +149,12 @@ Fix critical issues, address mediums, and this is good to go."
 |----|-------|
 | **Lead with bold issue** | Bury the lede |
 | Explain WHY it matters | Just say "this is wrong" |
-| Give concrete fix | Be vague |
+| Give concrete fix | Be vague ("improve error handling") |
 | Use code blocks | Describe code in prose |
-| Prefix praise with emoji | Ignore good work |
+| Be specific (file:line) | Give feedback on code you didn't review |
+| Prefix praise with 👍 | Ignore good work |
 | Be direct | Use softening language |
+| Give clear verdict | Avoid committing to Yes/No |
 
 ### Examples
 
@@ -161,12 +187,23 @@ Run through this for every PR:
 □ Retry logic: Exponential backoff? Jitter? Circuit breakers actually shared?
 □ Thread safety: random module? Global state? Non-atomic operations?
 □ Silent changes: Defaults changed? Parameters dropped? Behavior altered?
+□ Tests: Actually testing logic or just testing mocks?
+□ Migrations: Schema changes with rollback strategy?
+□ Backward compat: Will existing clients break?
 ```
 
 ## Review Verdicts
 
-| Verdict | When to Use |
-|---------|-------------|
-| `--approve` | No critical/medium issues, code is solid |
-| `--request-changes` | Critical issues OR multiple medium issues |
-| `--comment` | Questions only, no blocking issues |
+| Verdict | Command | When to Use |
+|---------|---------|-------------|
+| Approve | `--approve` | No critical/important issues, code is solid |
+| Request Changes | `--request-changes` | Critical issues OR multiple important issues |
+| Comment | `--comment` | Questions only, no blocking issues |
+
+## Output Format
+
+Always include:
+1. **Strengths** - What's well done (be specific)
+2. **Issues** - Categorized by severity with file:line refs
+3. **Recommendations** - Future improvements
+4. **Assessment** - Clear Yes/No/With fixes verdict with reasoning

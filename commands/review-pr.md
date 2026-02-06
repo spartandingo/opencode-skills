@@ -16,43 +16,35 @@ Review PR #$1 with the critical eye of someone who eats leetcode problems for br
 ```bash
 gh pr view $1 --json title,body,additions,deletions,files,commits,author
 gh pr diff $1
-```
-
-### 2. Get HEAD SHA for inline comments
-
-```bash
 gh pr view $1 --json headRefOid --jq '.headRefOid'
 ```
 
-### 3. Analyze for issues
+### 2. Review Checklist
 
-**Critical (block merge):**
-- Race conditions, deadlocks, resource leaks
-- Security vulnerabilities
-- Data corruption scenarios
-- Breaking API contract changes
-- Silent behavior changes
+**Code Quality:** Separation of concerns? Error handling? Type safety? DRY? Edge cases?
 
-**Medium (should fix):**
-- Broad exception handling
-- Missing error logging
-- Performance under load
-- Thread safety issues
-- Fragile patterns (monkey-patching)
-- Wrong HTTP status codes
+**Architecture:** Sound design? Scalability? Performance? Security?
 
-**Minor (nice to fix):**
-- Inefficient code
-- Missing types/docs
+**Testing:** Tests test logic (not mocks)? Edge cases covered? Integration tests?
+
+**Production Readiness:** Migrations? Backward compat? Docs?
+
+### 3. Categorize issues
+
+**Critical (block merge):** Race conditions, security vulns, data corruption, breaking changes, silent behavior changes
+
+**Important (should fix):** Broad exception handling, missing logging, perf issues, thread safety, fragile patterns, wrong status codes
+
+**Minor (nice to have):** Inefficient code, missing types/docs, style
 
 ### 4. Post inline comments
 
 ```bash
 gh api /repos/{OWNER}/{REPO}/pulls/$1/comments \
-  -f body="**Issue title.** Explanation and suggested fix." \
+  -f body="**Issue.** Explanation and fix." \
   -f commit_id="{HEAD_SHA}" \
-  -f path="{FILE_PATH}" \
-  -F line={LINE_NUMBER} \
+  -f path="{FILE}" \
+  -F line={LINE} \
   -f side="RIGHT"
 ```
 
@@ -63,37 +55,40 @@ gh pr review $1 --request-changes --body "## Staff Engineer Review
 
 **Verdict: Request Changes**
 
-[Summary of what's good and what needs work]
+---
+
+### Strengths
+[What's well done with file:line refs]
 
 ---
 
-### Critical Issues
-#### 1. [Title] (\`path/file.py:123\`)
-[Explanation]
+### Issues
+
+#### Critical
+1. **[Title]** (\`path/file.py:123\`)
+   - Issue: [What's wrong]
+   - Why: [Why it matters]
+   - Fix: [How to fix]
+
+#### Important
+...
+
+#### Minor
+...
 
 ---
 
-### Medium Issues
-#### 2. [Title]
-[Explanation]
+### Recommendations
+[Future improvements]
 
 ---
 
-### Good Stuff
-- **[Feature]** — [Why it's good]
+### Assessment
 
----
+**Ready to merge?** [Yes / No / With fixes]
 
-Fix critical issues, address mediums, and this is good to go."
+**Reasoning:** [1-2 sentences]"
 ```
-
-## Comment Style
-
-- Lead with **bold issue title**
-- Explain WHY it matters (real failure scenarios)
-- Be specific about the fix
-- No softening language ("maybe consider")
-- Acknowledge good work with praise
 
 ## Red Flags Checklist
 
@@ -107,6 +102,8 @@ Fix critical issues, address mediums, and this is good to go."
 - [ ] Retry logic has jitter/backoff?
 - [ ] Thread-safe random/global state?
 - [ ] Silent default/parameter changes?
+- [ ] Tests testing logic or mocks?
+- [ ] Migrations with rollback strategy?
 
 ## GitHub Enterprise
 
@@ -114,9 +111,13 @@ If the repo is on GitHub Enterprise, prefix all gh commands with GH_HOST:
 
 ```bash
 GH_HOST=git.example.com gh pr view $1
-GH_HOST=git.example.com gh api /repos/{OWNER}/{REPO}/pulls/$1/comments ...
+GH_HOST=git.example.com gh api ...
 ```
 
 ---
 
-Now review PR #$1. Be thorough, be direct, be fair. Post inline comments on specific lines using the gh CLI, then submit an overall review with your verdict.
+Now review PR #$1. Post inline comments on specific lines, then submit an overall review with:
+1. **Strengths** - What's well done
+2. **Issues** - Categorized by severity
+3. **Recommendations** - Future improvements
+4. **Assessment** - Clear Yes/No/With fixes verdict
